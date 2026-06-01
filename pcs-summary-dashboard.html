@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PCS Summary Dashboard</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #f5f4f0;
+      --surface: #ffffff;
+      --surface2: #f0ede8;
+      --border: rgba(0, 0, 0, 0.1);
+      --border2: rgba(0, 0, 0, 0.18);
+      --text: #1a1917;
+      --text2: #6b6860;
+      --text3: #9e9b94;
+      --angsana: #2271c4;
+      --angsana-light: #deeaf8;
+      --angsana-dark: #0f4a8a;
+      --wardplace: #3a7d14;
+      --wardplace-light: #dff0d0;
+      --wardplace-dark: #245009;
+      --trizen: #c97d00;
+      --trizen-light: #fdefd0;
+      --trizen-dark: #7a4c00;
+      --monarch: #5748c8;
+      --monarch-light: #e8e6fa;
+      --monarch-dark: #2f247a;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── TOP NAV ── */
+    .nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.2px;
+    }
+
+    .nav-brand .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--angsana), var(--monarch));
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── TABS ── */
+    .tabs {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      display: flex;
+      gap: 0;
+    }
+
+    .tab-btn {
+      padding: 14px 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text2);
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .tab-btn.active {
+      color: var(--text);
+      border-bottom-color: var(--text);
+    }
+
+    .tab-btn:hover:not(.active) {
+      color: var(--text);
+      background: var(--surface2);
+    }
+
+    /* ── MAIN ── */
+    .main {
+      padding: 24px 28px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    /* ── PAGE SECTIONS ── */
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    /* ── METRIC CARDS ── */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .metric-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .metric-label {
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text3);
+      margin-bottom: 6px;
+    }
+
+    .metric-value {
+      font-size: 26px;
+      font-weight: 300;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+    }
+
+    .metric-badge {
+      display: inline-block;
+      margin-top: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    /* ── FILTER ROW ── */
+    .filter-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      box-shadow: var(--shadow);
+    }
+
+    .filter-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text3);
+    }
+
+    .pill-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      padding: 5px 14px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border2);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: transparent;
+      color: var(--text2);
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .pill:hover {
+      border-color: var(--text2);
+      color: var(--text);
+    }
+
+    .pill.active-all {
+      background: var(--text);
+      color: #fff;
+      border-color: var(--text);
+    }
+
+    .pill.active-angsana {
+      background: var(--angsana);
+      color: #fff;
+      border-color: var(--angsana);
+    }
+
+    .pill.active-wardplace {
+      background: var(--wardplace);
+      color: #fff;
+      border-color: var(--wardplace);
+    }
+
+    .pill.active-trizen {
+      background: var(--trizen);
+      color: #fff;
+      border-color: var(--trizen);
+    }
+
+    .pill.active-monarch {
+      background: var(--monarch);
+      color: #fff;
+      border-color: var(--monarch);
+    }
+
+    .pill.active-year {
+      background: var(--surface2);
+      color: var(--text);
+      border-color: var(--border2);
+      font-weight: 600;
+    }
+
+    .divider-v {
+      width: 1px;
+      height: 24px;
+      background: var(--border);
+    }
+
+    /* ── CHART CARD ── */
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .chart-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: var(--text2);
+    }
+
+    .legend-swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+    }
+
+    /* ── DATA ENTRY CARD ── */
+    .entry-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .entry-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    .entry-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .field label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--text3);
+    }
+
+    .field select,
+    .field input {
+      width: 100%;
+      height: 38px;
+      padding: 0 12px;
+      border: 1.5px solid var(--border2);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text);
+      background: var(--surface);
+      outline: none;
+      transition: border-color 0.15s;
+      appearance: auto;
+    }
+
+    .field select:focus,
+    .field input:focus {
+      border-color: var(--angsana);
+    }
+
+    .btn {
+      height: 38px;
+      padding: 0 20px;
+      border-radius: var(--radius-sm);
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: var(--text);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #333;
+    }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border2);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border);
+    }
+
+    .btn-green {
+      background: var(--wardplace);
+      color: #fff;
+    }
+
+    .btn-green:hover {
+      opacity: 0.85;
+    }
+
+    /* ── DATA TABLE PAGE ── */
+    .table-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead tr {
+      background: var(--surface2);
+    }
+
+    th {
+      padding: 11px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--text2);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: var(--surface2);
+    }
+
+    .outlet-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge-angsana {
+      background: var(--angsana-light);
+      color: var(--angsana-dark);
+    }
+
+    .badge-wardplace {
+      background: var(--wardplace-light);
+      color: var(--wardplace-dark);
+    }
+
+    .badge-trizen {
+      background: var(--trizen-light);
+      color: var(--trizen-dark);
+    }
+
+    .badge-monarch {
+      background: var(--monarch-light);
+      color: var(--monarch-dark);
+    }
+
+    .dot-color {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text3);
+      font-size: 14px;
+    }
+
+    /* ── HOW TO USE PAGE ── */
+    .how-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .how-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .how-step {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--angsana);
+      margin-bottom: 8px;
+    }
+
+    .how-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .how-desc {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.6;
+    }
+
+    .how-ul {
+      margin-top: 8px;
+      padding-left: 16px;
+    }
+
+    .how-ul li {
+      margin-bottom: 4px;
+      font-size: 13px;
+      color: var(--text2);
+    }
+
+    .outlet-color-row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .outlet-color-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+
+    .outlet-swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1a1917;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+      z-index: 999;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .toast.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ── EDIT MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 24px;
+      width: 360px;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+
+    .btn-danger {
+      background: #c0392b;
+      color: #fff;
+    }
+
+    .btn-danger:hover {
+      background: #a93226;
+    }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 3px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="nav-brand">
+      <span class="dot"></span>
+      PCS Summary Dashboard
+    </div>
+    <div class="nav-actions">
+      <button class="btn btn-green" onclick="exportExcel()">⬇ Export Excel</button>
+    </div>
+  </nav>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('dashboard')">📊 Dashboard</button>
+    <button class="tab-btn" onclick="switchTab('data')">📋 All Data</button>
+    <button class="tab-btn" onclick="switchTab('howto')">📖 How to Use</button>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- ── DASHBOARD PAGE ── -->
+    <div class="page active" id="page-dashboard">
+
+      <div class="metric-grid" id="metricGrid"></div>
+
+      <div class="filter-section">
+        <span class="filter-label">Outlet</span>
+        <div class="pill-row" id="outletFilters">
+          <button class="pill active-all" onclick="toggleOutlet('all')">All outlets</button>
+          <button class="pill" onclick="toggleOutlet('angsana')">Angsana</button>
+          <button class="pill" onclick="toggleOutlet('wardplace')">Ward Place</button>
+          <button class="pill" onclick="toggleOutlet('trizen')">Trizen</button>
+          <button class="pill" onclick="toggleOutlet('monarch')">Monarch</button>
+        </div>
+        <div class="divider-v"></div>
+        <span class="filter-label">Year</span>
+        <div class="pill-row" id="yearFilters">
+          <button class="pill active-year" onclick="toggleYear(2024)">2024</button>
+          <button class="pill active-year" onclick="toggleYear(2025)">2025</button>
+          <button class="pill active-year" onclick="toggleYear(2026)">2026</button>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <span class="chart-title">Monthly PCS by Outlet</span>
+          <div class="chart-legend" id="chartLegend"></div>
+        </div>
+        <div style="position:relative; width:100%; height:340px;">
+          <canvas id="pcsChart" role="img" aria-label="Monthly PCS bar chart by outlet across 2024 2025 2026">PCS
+            summary data.</canvas>
+        </div>
+      </div>
+
+      <div class="entry-card">
+        <div class="entry-title">➕ Enter / Update Data</div>
+        <div class="entry-grid">
+          <div class="field">
+            <label>Outlet</label>
+            <select id="inp-outlet">
+              <option value="angsana">Angsana</option>
+              <option value="wardplace">Ward Place</option>
+              <option value="trizen">Trizen</option>
+              <option value="monarch">Monarch</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Year</label>
+            <select id="inp-year">
+              <option>2024</option>
+              <option>2025</option>
+              <option>2026</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Month</label>
+            <select id="inp-month">
+              <option value="0">January</option>
+              <option value="1">February</option>
+              <option value="2">March</option>
+              <option value="3">April</option>
+              <option value="4">May</option>
+              <option value="5">June</option>
+              <option value="6">July</option>
+              <option value="7">August</option>
+              <option value="8">September</option>
+              <option value="9">October</option>
+              <option value="10">November</option>
+              <option value="11">December</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>PCS (units)</label>
+            <input type="number" id="inp-value" placeholder="e.g. 150" min="0">
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn btn-primary" onclick="saveEntry()">✓ Save Entry</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ALL DATA PAGE ── -->
+    <div class="page" id="page-data">
+      <div class="table-controls">
+        <select id="tbl-outlet" class="field"
+          style="height:36px; padding:0 10px; border:1.5px solid var(--border2); border-radius:var(--radius-sm); font-family:'DM Sans',sans-serif; font-size:13px; color:var(--text); background:var(--surface);"
+          onchange="renderTable()">
+          <option value="all">All outlets</option>
+          <option value="angsana">Angsana</option>
+          <option value="wardplace">Ward Place</option>
+          <option value="trizen">Trizen</option>
+          <option value="monarch">Monarch</option>
+        </select>
+        <select id="tbl-year" class="field"
+          style="height:36px; padding:0 10px; border:1.5px solid var(--border2); border-radius:var(--radius-sm); font-family:'DM Sans',sans-serif; font-size:13px; color:var(--text); background:var(--surface);"
+          onchange="renderTable()">
+          <option value="all">All years</option>
+          <option>2024</option>
+          <option>2025</option>
+          <option>2026</option>
+        </select>
+        <button class="btn btn-secondary" onclick="clearAllData()" style="height:36px;">🗑 Clear All Data</button>
+        <span style="margin-left:auto; font-size:12px; color:var(--text3);" id="rowCount"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Outlet</th>
+              <th>Year</th>
+              <th>Month</th>
+              <th>PCS</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── HOW TO USE PAGE ── -->
+    <div class="page" id="page-howto">
+      <div class="how-grid">
+        <div class="how-card">
+          <div class="how-step">Step 1</div>
+          <div class="how-title">Enter your data</div>
+          <div class="how-desc">Go to the <strong>Dashboard</strong> tab. At the bottom, use the "Enter / Update Data"
+            form:
+            <ul class="how-ul">
+              <li>Select the <strong>outlet</strong> (Angsana, Ward Place, Trizen, Monarch)</li>
+              <li>Choose the <strong>year</strong> (2024, 2025, 2026)</li>
+              <li>Pick the <strong>month</strong></li>
+              <li>Type the <strong>PCS value</strong> (number of pieces)</li>
+              <li>Click <strong>Save Entry</strong></li>
+            </ul>
+            The chart updates instantly. Your data is saved automatically in your browser.
+          </div>
+        </div>
+        <div class="how-card">
+          <div class="how-step">Step 2</div>
+          <div class="how-title">Filter the chart</div>
+          <div class="how-desc">Use the filter buttons above the chart:
+            <ul class="how-ul">
+              <li><strong>Outlet filters</strong> — click an outlet name to see only that outlet, or "All outlets" to
+                see all four at once. You can select multiple outlets too.</li>
+              <li><strong>Year filters</strong> — toggle 2024, 2025, and/or 2026 on/off to compare years side by side.
+              </li>
+            </ul>
+            The summary cards at the top update to reflect your selected filters.
+          </div>
+        </div>
+        <div class="how-card">
+          <div class="how-step">Step 3</div>
+          <div class="how-title">Review all data</div>
+          <div class="how-desc">Click the <strong>All Data</strong> tab to see every entry in a table. You can:
+            <ul class="how-ul">
+              <li>Filter by outlet or year using the dropdowns</li>
+              <li>Edit any entry by clicking <strong>Edit</strong></li>
+              <li>Delete individual entries with <strong>Delete</strong></li>
+              <li>Clear all data with <strong>Clear All Data</strong></li>
+            </ul>
+          </div>
+        </div>
+        <div class="how-card">
+          <div class="how-step">Step 4</div>
+          <div class="how-title">Export to Excel</div>
+          <div class="how-desc">Click the <strong>⬇ Export Excel</strong> button (top right, always visible). This
+            downloads a <code>.xlsx</code> file with:
+            <ul class="how-ul">
+              <li>A <strong>Summary</strong> sheet — all 4 outlets × 12 months × 3 years in a grid</li>
+              <li>An <strong>All Data</strong> sheet — every raw entry in a table</li>
+            </ul>
+            Open in Microsoft Excel or Google Sheets.
+          </div>
+        </div>
+        <div class="how-card">
+          <div class="how-step">Colors</div>
+          <div class="how-title">Outlet color guide</div>
+          <div class="how-desc">
+            <div class="outlet-color-row">
+              <div class="outlet-color-item"><span class="outlet-swatch" style="background:var(--angsana)"></span>
+                <strong>Angsana</strong> — Blue</div>
+              <div class="outlet-color-item"><span class="outlet-swatch" style="background:var(--wardplace)"></span>
+                <strong>Ward Place</strong> — Green</div>
+              <div class="outlet-color-item"><span class="outlet-swatch" style="background:var(--trizen)"></span>
+                <strong>Trizen</strong> — Yellow / Amber</div>
+              <div class="outlet-color-item"><span class="outlet-swatch" style="background:var(--monarch)"></span>
+                <strong>Monarch</strong> — Purple</div>
+            </div>
+          </div>
+        </div>
+        <div class="how-card">
+          <div class="how-step">Data storage</div>
+          <div class="how-title">Where is data saved?</div>
+          <div class="how-desc">Your data is saved in your <strong>browser's local storage</strong>. This means:
+            <ul class="how-ul">
+              <li>✅ Data persists when you close and reopen the file</li>
+              <li>✅ No internet connection needed</li>
+              <li>⚠️ Data is tied to this browser on this computer</li>
+              <li>💡 Use <strong>Export Excel</strong> regularly to back up your data</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- EDIT MODAL -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal">
+      <div class="modal-title">Edit Entry</div>
+      <div class="entry-grid" style="grid-template-columns:1fr 1fr;">
+        <div class="field">
+          <label>Outlet</label>
+          <select id="edit-outlet">
+            <option value="angsana">Angsana</option>
+            <option value="wardplace">Ward Place</option>
+            <option value="trizen">Trizen</option>
+            <option value="monarch">Monarch</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Year</label>
+          <select id="edit-year">
+            <option>2024</option>
+            <option>2025</option>
+            <option>2026</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Month</label>
+          <select id="edit-month">
+            <option value="0">January</option>
+            <option value="1">February</option>
+            <option value="2">March</option>
+            <option value="3">April</option>
+            <option value="4">May</option>
+            <option value="5">June</option>
+            <option value="6">July</option>
+            <option value="7">August</option>
+            <option value="8">September</option>
+            <option value="9">October</option>
+            <option value="10">November</option>
+            <option value="11">December</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>PCS (units)</label>
+          <input type="number" id="edit-value" min="0">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="deleteEntry()">Delete</button>
+        <button class="btn btn-primary" onclick="saveEdit()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const OUTLETS = ['angsana', 'wardplace', 'trizen', 'monarch'];
+    const LABELS = { angsana: 'Angsana', wardplace: 'Ward Place', trizen: 'Trizen', monarch: 'Monarch' };
+    const COLORS = { angsana: '#2271c4', wardplace: '#3a7d14', trizen: '#c97d00', monarch: '#5748c8' };
+    const YEARS = [2024, 2025, 2026];
+    const STORAGE_KEY = 'pcs_dashboard_data';
+
+    // entries: [{outlet, year, month(0-based), value}]
+    let entries = [];
+    let activeOutlets = new Set(['all']);
+    let activeYears = new Set([2024, 2025, 2026]);
+    let editIdx = null;
+    let chart = null;
+
+    // ── STORAGE ──────────────────────────────────────────────
+    function loadData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) entries = JSON.parse(raw);
+      } catch (e) { entries = []; }
+    }
+    function saveData() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    }
+
+    // ── TABS ─────────────────────────────────────────────────
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach((b, i) => {
+        const tabs = ['dashboard', 'data', 'howto'];
+        b.classList.toggle('active', tabs[i] === tab);
+      });
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-' + tab).classList.add('active');
+      if (tab === 'data') renderTable();
+    }
+
+    // ── FILTERS ──────────────────────────────────────────────
+    function toggleOutlet(o) {
+      if (o === 'all') {
+        activeOutlets = new Set(['all']);
+      } else {
+        activeOutlets.delete('all');
+        if (activeOutlets.has(o)) { activeOutlets.delete(o); if (!activeOutlets.size) activeOutlets.add('all'); }
+        else activeOutlets.add(o);
+      }
+      const btns = document.querySelectorAll('#outletFilters .pill');
+      const keys = ['all', 'angsana', 'wardplace', 'trizen', 'monarch'];
+      btns.forEach((b, i) => {
+        b.className = 'pill';
+        const k = keys[i];
+        if (activeOutlets.has(k)) b.classList.add('active-' + k);
+      });
+      refreshChart();
+    }
+    function toggleYear(y) {
+      if (activeYears.has(y)) { if (activeYears.size > 1) activeYears.delete(y); }
+      else activeYears.add(y);
+      document.querySelectorAll('#yearFilters .pill').forEach((b, i) => {
+        if (activeYears.has(YEARS[i])) b.classList.add('active-year');
+        else b.classList.remove('active-year');
+      });
+      refreshChart();
+    }
+    function getVisibleOutlets() {
+      return activeOutlets.has('all') ? OUTLETS : OUTLETS.filter(o => activeOutlets.has(o));
+    }
+
+    // ── AGGREGATE ────────────────────────────────────────────
+    function getVal(outlet, year, month) {
+      const e = entries.find(e => e.outlet === outlet && e.year === year && e.month === month);
+      return e ? e.value : 0;
+    }
+
+    // ── CHART ────────────────────────────────────────────────
+    function buildChartData() {
+      const yrs = [...activeYears].sort();
+      const labels = [];
+      yrs.forEach(y => MONTHS_SHORT.forEach(m => labels.push(m + ' \'' + String(y).slice(2))));
+      const outlets = getVisibleOutlets();
+      const datasets = outlets.map(o => {
+        const vals = [];
+        yrs.forEach(y => MONTHS.forEach((_, mi) => vals.push(getVal(o, y, mi))));
+        return {
+          label: LABELS[o],
+          data: vals,
+          backgroundColor: COLORS[o] + 'cc',
+          borderColor: COLORS[o],
+          borderWidth: 1,
+          borderRadius: 4,
+        };
+      });
+      return { labels, datasets };
+    }
+
+    function refreshChart() {
+      const { labels, datasets } = buildChartData();
+      if (chart) {
+        chart.data.labels = labels;
+        chart.data.datasets = datasets;
+        chart.update();
+      } else {
+        chart = new Chart(document.getElementById('pcsChart'), {
+          type: 'bar',
+          data: { labels, datasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: ctx => ' ' + ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString() + ' pcs' } }
+            },
+            scales: {
+              x: { ticks: { autoSkip: true, maxRotation: 45, font: { size: 11 }, color: '#9e9b94' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+              y: { beginAtZero: true, ticks: { font: { size: 11 }, color: '#9e9b94', callback: v => v.toLocaleString() }, grid: { color: 'rgba(0,0,0,0.06)' } }
+            }
+          }
+        });
+      }
+      buildLegend();
+      buildMetrics();
+    }
+
+    function buildLegend() {
+      const outlets = getVisibleOutlets();
+      document.getElementById('chartLegend').innerHTML = outlets.map(o =>
+        `<span class="legend-item"><span class="legend-swatch" style="background:${COLORS[o]}"></span>${LABELS[o]}</span>`
+      ).join('');
+    }
+
+    function buildMetrics() {
+      const outlets = getVisibleOutlets();
+      const yrs = [...activeYears].sort();
+      let total = 0;
+      const ot = {};
+      outlets.forEach(o => {
+        let s = 0;
+        yrs.forEach(y => MONTHS.forEach((_, m) => s += getVal(o, y, m)));
+        ot[o] = s; total += s;
+      });
+      document.getElementById('metricGrid').innerHTML = `
+    <div class="metric-card">
+      <div class="metric-label">Total PCS</div>
+      <div class="metric-value">${total.toLocaleString()}</div>
+      <div class="metric-badge" style="background:#f0ede8; color:#6b6860;">${yrs.join(' · ')}</div>
+    </div>
+    ${outlets.map(o => `
+      <div class="metric-card">
+        <div class="metric-label">${LABELS[o]}</div>
+        <div class="metric-value" style="color:${COLORS[o]}">${ot[o].toLocaleString()}</div>
+        <div class="metric-badge" style="background:${COLORS[o]}22; color:${COLORS[o]}; font-size:10px;">
+          ${total > 0 ? Math.round(ot[o] / total * 100) : 0}% share
+        </div>
+      </div>
+    `).join('')}
+  `;
+    }
+
+    // ── SAVE ENTRY ───────────────────────────────────────────
+    function saveEntry() {
+      const outlet = document.getElementById('inp-outlet').value;
+      const year = parseInt(document.getElementById('inp-year').value);
+      const month = parseInt(document.getElementById('inp-month').value);
+      const val = parseFloat(document.getElementById('inp-value').value);
+      if (isNaN(val) || val < 0) { showToast('⚠ Please enter a valid number'); return; }
+      const existing = entries.findIndex(e => e.outlet === outlet && e.year === year && e.month === month);
+      if (existing >= 0) entries[existing].value = val;
+      else entries.push({ outlet, year, month, value: val });
+      saveData();
+      refreshChart();
+      document.getElementById('inp-value').value = '';
+      showToast('✓ ' + LABELS[outlet] + ' · ' + MONTHS[month] + ' ' + year + ' → ' + val.toLocaleString() + ' pcs saved');
+    }
+
+    // ── TABLE ────────────────────────────────────────────────
+    function renderTable() {
+      const fOutlet = document.getElementById('tbl-outlet').value;
+      const fYear = document.getElementById('tbl-year').value;
+      let rows = entries.filter(e =>
+        (fOutlet === 'all' || e.outlet === fOutlet) &&
+        (fYear === 'all' || e.year === parseInt(fYear))
+      ).sort((a, b) => a.year - b.year || a.month - b.month || OUTLETS.indexOf(a.outlet) - OUTLETS.indexOf(b.outlet));
+      document.getElementById('rowCount').textContent = rows.length + ' records';
+      const tbody = document.getElementById('tableBody');
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No data yet. Add entries from the Dashboard tab.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = rows.map((e, i) => {
+        const realIdx = entries.indexOf(e);
+        return `<tr>
+      <td><span class="outlet-badge badge-${e.outlet}"><span class="dot-color" style="background:${COLORS[e.outlet]}"></span>${LABELS[e.outlet]}</span></td>
+      <td>${e.year}</td>
+      <td>${MONTHS[e.month]}</td>
+      <td style="font-family:'DM Mono',monospace; font-weight:500;">${e.value.toLocaleString()}</td>
+      <td>
+        <button class="btn btn-secondary" style="height:28px; padding:0 10px; font-size:12px;" onclick="openEdit(${realIdx})">Edit</button>
+      </td>
+    </tr>`;
+      }).join('');
+    }
+
+    // ── EDIT MODAL ───────────────────────────────────────────
+    function openEdit(idx) {
+      editIdx = idx;
+      const e = entries[idx];
+      document.getElementById('edit-outlet').value = e.outlet;
+      document.getElementById('edit-year').value = e.year;
+      document.getElementById('edit-month').value = e.month;
+      document.getElementById('edit-value').value = e.value;
+      document.getElementById('editModal').classList.add('open');
+    }
+    function closeModal() { document.getElementById('editModal').classList.remove('open'); editIdx = null; }
+    function saveEdit() {
+      if (editIdx === null) return;
+      const outlet = document.getElementById('edit-outlet').value;
+      const year = parseInt(document.getElementById('edit-year').value);
+      const month = parseInt(document.getElementById('edit-month').value);
+      const val = parseFloat(document.getElementById('edit-value').value);
+      if (isNaN(val) || val < 0) { showToast('⚠ Invalid value'); return; }
+      // check for duplicate (different idx, same outlet/year/month)
+      const dup = entries.findIndex((e, i) => i !== editIdx && e.outlet === outlet && e.year === year && e.month === month);
+      if (dup >= 0) { entries[dup].value = val; entries.splice(editIdx, 1); }
+      else { entries[editIdx] = { outlet, year, month, value: val }; }
+      saveData(); closeModal(); renderTable(); refreshChart();
+      showToast('✓ Entry updated');
+    }
+    function deleteEntry() {
+      if (editIdx === null) return;
+      entries.splice(editIdx, 1);
+      saveData(); closeModal(); renderTable(); refreshChart();
+      showToast('🗑 Entry deleted');
+    }
+    function clearAllData() {
+      if (!confirm('Delete ALL data? This cannot be undone.')) return;
+      entries = []; saveData(); renderTable(); refreshChart();
+      showToast('All data cleared');
+    }
+
+    // ── EXPORT EXCEL ─────────────────────────────────────────
+    function exportExcel() {
+      const wb = XLSX.utils.book_new();
+
+      // Sheet 1: Summary grid
+      const summaryRows = [];
+      YEARS.forEach(y => {
+        summaryRows.push([`Year ${y}`]);
+        const header = ['Month', ...OUTLETS.map(o => LABELS[o]), 'Total'];
+        summaryRows.push(header);
+        let yearTotals = new Array(OUTLETS.length).fill(0);
+        MONTHS.forEach((m, mi) => {
+          const vals = OUTLETS.map(o => getVal(o, y, mi));
+          const rowTotal = vals.reduce((a, b) => a + b, 0);
+          summaryRows.push([m, ...vals, rowTotal]);
+          vals.forEach((v, i) => yearTotals[i] += v);
+        });
+        summaryRows.push(['Year Total', ...yearTotals, yearTotals.reduce((a, b) => a + b, 0)]);
+        summaryRows.push([]);
+      });
+      const ws1 = XLSX.utils.aoa_to_sheet(summaryRows);
+      ws1['!cols'] = [{ wch: 14 }, ...OUTLETS.map(() => ({ wch: 12 })), { wch: 10 }];
+      XLSX.utils.book_append_sheet(wb, ws1, 'Summary');
+
+      // Sheet 2: All raw data
+      const allRows = [['Outlet', 'Year', 'Month', 'Month No.', 'PCS']];
+      entries.sort((a, b) => a.year - b.year || a.month - b.month || OUTLETS.indexOf(a.outlet) - OUTLETS.indexOf(b.outlet))
+        .forEach(e => allRows.push([LABELS[e.outlet], e.year, MONTHS[e.month], e.month + 1, e.value]));
+      const ws2 = XLSX.utils.aoa_to_sheet(allRows);
+      ws2['!cols'] = [{ wch: 14 }, { wch: 8 }, { wch: 12 }, { wch: 10 }, { wch: 10 }];
+      XLSX.utils.book_append_sheet(wb, ws2, 'All Data');
+
+      const today = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `PCS_Summary_${today}.xlsx`);
+      showToast('⬇ Excel exported successfully');
+    }
+
+    // ── TOAST ─────────────────────────────────────────────────
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    // ── INIT ─────────────────────────────────────────────────
+    loadData();
+    refreshChart();
+  </script>
+</body>
+
+</html>
